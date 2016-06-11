@@ -1,5 +1,6 @@
 #pragma once
 #include <time.h>     // for clock()
+#include "stdafx.h"
 namespace gui_camera {
 
 	using namespace System;
@@ -47,6 +48,10 @@ namespace gui_camera {
 	private: System::Windows::Forms::Button^  button3;
 	private: System::Windows::Forms::Button^  button4;
 	private: System::Windows::Forms::Button^  button5;
+	private: System::Windows::Forms::ComboBox^  comboBox3;
+	private: System::Windows::Forms::Label^  label2;
+	private: System::Windows::Forms::ComboBox^  comboBox4;
+	private: System::Windows::Forms::Label^  label3;
 
 	private:
 		/// <summary>
@@ -72,6 +77,10 @@ namespace gui_camera {
 			this->button3 = (gcnew System::Windows::Forms::Button());
 			this->button4 = (gcnew System::Windows::Forms::Button());
 			this->button5 = (gcnew System::Windows::Forms::Button());
+			this->comboBox3 = (gcnew System::Windows::Forms::ComboBox());
+			this->label2 = (gcnew System::Windows::Forms::Label());
+			this->comboBox4 = (gcnew System::Windows::Forms::ComboBox());
+			this->label3 = (gcnew System::Windows::Forms::Label());
 			this->SuspendLayout();
 			// 
 			// button1
@@ -149,7 +158,7 @@ namespace gui_camera {
 			// 
 			// button4
 			// 
-			this->button4->Location = System::Drawing::Point(268, 297);
+			this->button4->Location = System::Drawing::Point(268, 363);
 			this->button4->Name = L"button4";
 			this->button4->Size = System::Drawing::Size(75, 23);
 			this->button4->TabIndex = 8;
@@ -159,7 +168,7 @@ namespace gui_camera {
 			// 
 			// button5
 			// 
-			this->button5->Location = System::Drawing::Point(349, 297);
+			this->button5->Location = System::Drawing::Point(349, 363);
 			this->button5->Name = L"button5";
 			this->button5->Size = System::Drawing::Size(75, 23);
 			this->button5->TabIndex = 9;
@@ -167,11 +176,51 @@ namespace gui_camera {
 			this->button5->UseVisualStyleBackColor = true;
 			this->button5->Click += gcnew System::EventHandler(this, &ImageProcessingForm::button5_Click);
 			// 
+			// comboBox3
+			// 
+			this->comboBox3->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+			this->comboBox3->FormattingEnabled = true;
+			this->comboBox3->Location = System::Drawing::Point(303, 297);
+			this->comboBox3->Name = L"comboBox3";
+			this->comboBox3->Size = System::Drawing::Size(121, 20);
+			this->comboBox3->TabIndex = 10;
+			// 
+			// label2
+			// 
+			this->label2->AutoSize = true;
+			this->label2->Location = System::Drawing::Point(12, 300);
+			this->label2->Name = L"label2";
+			this->label2->Size = System::Drawing::Size(80, 12);
+			this->label2->TabIndex = 11;
+			this->label2->Text = L"‰ò‚Æ‚·‚é‰æ‘f”";
+			// 
+			// comboBox4
+			// 
+			this->comboBox4->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+			this->comboBox4->FormattingEnabled = true;
+			this->comboBox4->Location = System::Drawing::Point(303, 323);
+			this->comboBox4->Name = L"comboBox4";
+			this->comboBox4->Size = System::Drawing::Size(121, 20);
+			this->comboBox4->TabIndex = 12;
+			// 
+			// label3
+			// 
+			this->label3->AutoSize = true;
+			this->label3->Location = System::Drawing::Point(12, 326);
+			this->label3->Name = L"label3";
+			this->label3->Size = System::Drawing::Size(94, 12);
+			this->label3->TabIndex = 13;
+			this->label3->Text = L"•\Ž¦‚·‚é‰ò‚ÌŒÂ”";
+			// 
 			// ImageProcessingForm
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 12);
 			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
-			this->ClientSize = System::Drawing::Size(436, 391);
+			this->ClientSize = System::Drawing::Size(436, 450);
+			this->Controls->Add(this->label3);
+			this->Controls->Add(this->comboBox4);
+			this->Controls->Add(this->label2);
+			this->Controls->Add(this->comboBox3);
 			this->Controls->Add(this->button5);
 			this->Controls->Add(this->button4);
 			this->Controls->Add(this->button3);
@@ -200,6 +249,9 @@ namespace gui_camera {
 		comboBox2->Items->Add("Auto");
 		for (int i = 0; i < 256; i++) comboBox2->Items->Add(i);
 		comboBox2->Text = "Auto";
+
+		for (int i = 2; i <= 32; i++) comboBox3->Items->Add(i);
+		comboBox3->Text = "2";
 	}
 	private: System::Void button1_Click(System::Object^  sender, System::EventArgs^  e) {
 		folderBrowserDialog1->ShowDialog();
@@ -229,11 +281,12 @@ namespace gui_camera {
 	}
 	private: System::Void button4_Click(System::Object^  sender, System::EventArgs^  e) {
 		Cam tim;
+		tim.SetCombo(comboBox3->Text, 3);
 		tim.StartTimer();
 	}	//start
 	private: System::Void button5_Click(System::Object^  sender, System::EventArgs^  e) {
 		Cam tim;
 		tim.StopTimer();
 	}	//stop
-	};
+};
 }

@@ -10,8 +10,7 @@
 using namespace std;
 
 #define MAX_IMAGE_NUM 200
-#define white -1
-#define black 0
+#define LABEL_ARRAY_NUM	1024
 
 #define width	640
 #define hight	480
@@ -24,7 +23,9 @@ string Cam::auto_root;
 string Cam::combo_text1;
 string Cam::combo_text2;
 string Cam::combo_text3;
+string Cam::write_path;
 int Cam::file_num = 0;
+int Cam::label_mass_pixel = 2;
 
 cv::Mat moved_img[MAX_IMAGE_NUM];
 cv::Mat ave_img = cv::Mat::zeros(cv::Size(640, 480), CV_8U);
@@ -261,7 +262,7 @@ void Cam::MakeSigmaImage() {
 	// make sigma_image
 	write_path = image_root + "\\probability_distribution";
 	_mkdir(write_path.c_str());
-	
+
 	for (int sigma = 0; sigma < 7; sigma++) {
 		cv::Mat sigma_img = cv::Mat::zeros(cv::Size(640, 480), CV_8U);
 		for (int R = R_min; R < R_max; ++R) {
@@ -322,13 +323,17 @@ void Cam::OutofSigma() {
 MMRESULT timerID;
 void CALLBACK timerProc(UINT uTimerID, UINT uMsg, DWORD dwUser, DWORD dummy1, DWORD dummy2) {
 
+	Cam::write_path = Cam::auto_root + "\\auto_tmp";
+	_mkdir(Cam::write_path.c_str());
+	static int filenum_static = 0;
+
 	cli::array<String^>^ file = Directory::GetFiles(msclr::interop::marshal_as<System::String^>(Cam::auto_file));
 	Cam::file_num = file->Length;
 	for (int i = 0; i < Cam::file_num; i++) {
 		String^ file_ = file[i];
 		file_path[i] = msclr::interop::marshal_as<std::string>(file_);
 	}
-	cv::Mat	gray_img, median_img, bin_img, moved_img, moved_img_c;
+	cv::Mat	gray_img, median_img, bin_img, moved_img, moved_img_c, labeled_c;
 	cv::Mat	red_img(cv::Size(width, hight), CV_8UC3, cv::Scalar(0, 0, 0));
 	for (int terget_num = 0; terget_num < Cam::file_num; terget_num++) {
 		cv::Mat src_img = cv::imread(file_path[terget_num], 1);
@@ -348,23 +353,42 @@ void CALLBACK timerProc(UINT uTimerID, UINT uMsg, DWORD dwUser, DWORD dummy1, DW
 		affine_matrix = cv::getRotationMatrix2D(center, ang, 1);
 		cv::warpAffine(moved_img, moved_img, affine_matrix, median_img.size());
 		cv::cvtColor(moved_img, moved_img_c, CV_GRAY2BGR);
+		cv::cvtColor(moved_img, labeled_c, CV_GRAY2BGR);
 
-		unsigned char	*label_src = new unsigned char[width * hight];
+		cv::Mat label_src = cv::Mat::zeros(cv::Size(640, 480), CV_8U);
+		cv::Mat sigma_diff = cv::Mat::zeros(cv::Size(640, 480), CV_8U);
 		short	*label_result = new short[width * hight];
 
 		for (int R = 0; R < src_img.rows; ++R) {
 			for (int C = 0; C < src_img.cols; ++C) {
-				if ((Nsigma_img[5].data[R * 640 + C] > moved_img.data[R * 640 + C]) &&
-					(Nsigma_img[1].data[R * 640 + C] < moved_img.data[R * 640 + C])) {
-					label_src[R * 640 + C] = 0;
-				}
-				else if ((Nsigma_img[6].data[R * 640 + C] > moved_img.data[R * 640 + C]) &&
-					(Nsigma_img[0].data[R * 640 + C] < moved_img.data[R * 640 + C])) {
+				//if ((Nsigma_img[5].data[R * 640 + C] > moved_img.data[R * 640 + C]) &&
+				//	(Nsigma_img[1].data[R * 640 + C] < moved_img.data[R * 640 + C])) {
+				//}
+				if ((Nsigma_img[6].data[R * 640 + C] > moved_img.data[R * 640 + C]) &&
+					(Nsigma_img[5].data[R * 640 + C] < moved_img.data[R * 640 + C])) {
+					sigma_diff.data[R * 640 + C] =
+						Nsigma_img[6].data[R * 640 + C] - moved_img.data[R * 640 + C];
+					label_src.data[R * 640 + C] = 255;
 					moved_img_c.data[(R * 640 + C) * 3 + 0] = 0;
 					moved_img_c.data[(R * 640 + C) * 3 + 1] = 0;
 					moved_img_c.data[(R * 640 + C) * 3 + 2] = 255;
-					label_src[R * 640 + C] = 255;
 				}
+				else if ((Nsigma_img[1].data[R * 640 + C] > moved_img.data[R * 640 + C]) &&
+					(Nsigma_img[0].data[R * 640 + C] < moved_img.data[R * 640 + C])) {
+					sigma_diff.data[R * 640 + C] =
+						moved_img.data[R * 640 + C] - Nsigma_img[0].data[R * 640 + C];
+					label_src.data[R * 640 + C] = 255;
+					moved_img_c.data[(R * 640 + C) * 3 + 0] = 0;
+					moved_img_c.data[(R * 640 + C) * 3 + 1] = 0;
+					moved_img_c.data[(R * 640 + C) * 3 + 2] = 255;
+				}
+				//else if ((Nsigma_img[6].data[R * 640 + C] > moved_img.data[R * 640 + C]) &&
+				//	(Nsigma_img[0].data[R * 640 + C] < moved_img.data[R * 640 + C])) {
+				//	moved_img_c.data[(R * 640 + C) * 3 + 0] = 0;
+				//	moved_img_c.data[(R * 640 + C) * 3 + 1] = 0;
+				//	moved_img_c.data[(R * 640 + C) * 3 + 2] = 255;
+				//	label_src.data[R * 640 + C] = 255;
+				//}
 
 			}
 		}
@@ -372,41 +396,87 @@ void CALLBACK timerProc(UINT uTimerID, UINT uMsg, DWORD dwUser, DWORD dummy1, DW
 		//cv::Mat element(1, 2, CV_8U, cv::Scalar::all(255));
 		//cv::morphologyEx(open_img, open_img, cv::MORPH_OPEN, element);
 		LabelingBS labeling;
-		labeling.Exec(label_src, label_result, width, hight, true, 2);
-		cv::Mat labeld = cv::Mat::zeros(cv::Size(640, 480), CV_8U);
-		cv::Mat labeled_c = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);	//color
+		labeling.Exec(label_src.data, label_result, width, hight, true, Cam::label_mass_pixel);
+		//cv::Mat labeled_c = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);	//color
+
+		//for (int i = 0; i < labeling.GetNumOfResultRegions(); i++) {
+		//	RegionInfoBS *ri = labeling.GetResultRegionInfo(i);
+		//	cerr << i << "\t" << ri->GetNumOfPixels() << "\n";
+		//}
+		int label_array[LABEL_ARRAY_NUM] = { 0 };
 		for (int R = 0; R < hight; ++R) {
 			for (int C = 0; C < width; ++C) {
-				labeld.data[R * 640 + C] = 0;
+				label_array[label_result[R * 640 + C]] += sigma_diff.data[R * 640 + C];
+				//if (label_result[R * 640 + C] > 1) {
+				//	labeled_c.data[(R * 640 + C) * 3 + 0] = label_result[R * 640 + C] * 5;
+				//	labeled_c.data[(R * 640 + C) * 3 + 1] = 255 - label_result[R * 640 + C] * 5;
+				//	if (label_result[R * 640 + C] % 2 == 0) {
+				//		labeled_c.data[(R * 640 + C) * 3 + 2] = 255;
+				//	}
+				//	else {
+				//		labeled_c.data[(R * 640 + C) * 3 + 2] = 0;
+				//	}
+
+				//}
+
 			}
 		}
-		for (int R = 0; R < hight; ++R) {
-			for (int C = 0; C < width; ++C) {
-				if (label_result[R * 640 + C] > 1) {
-					labeld.data[R * 640 + C] = 255;
-					labeled_c.data[(R * 640 + C) * 3 + 0] = label_result[R * 640 + C] * 5;
-					labeled_c.data[(R * 640 + C) * 3 + 1] = 255 - label_result[R * 640 + C] * 5;
-					if (label_result[R * 640 + C] % 2 == 0) {
-						labeled_c.data[(R * 640 + C) * 3 + 2] = 255;
-					}
-					else {
-						labeled_c.data[(R * 640 + C) * 3 + 2] = 0;
-					}
+		label_array[0] = 0;	//background
 
+		int label_array_tmp[LABEL_ARRAY_NUM] = { 0 };
+		memcpy(label_array_tmp, label_array, LABEL_ARRAY_NUM);
+
+		int sorted_label[10] = { 0 };
+		for (int serch = 0; serch < 10; serch++) {
+			int i_max = 0, i_tmp = 0;
+			for (int i = 0; i < LABEL_ARRAY_NUM; i++) {
+				if (i_max < label_array_tmp[i]) {
+					i_max = label_array_tmp[i];
+					i_tmp = i;
 				}
-
+			}
+			label_array_tmp[i_tmp] = 0;
+			sorted_label[serch] = i_tmp;
+		}
+		//for (int serch = 0; serch < 10; serch++) {
+		//	cerr << sorted_label[serch] << "\t";
+		//}
+		//cerr << "\n";
+		for (int R = 0; R < hight; ++R) {
+			for (int C = 0; C < width; ++C) {
+				for (int serch = 0; serch < 10; serch++) {
+					if (label_result[R * 640 + C] == sorted_label[serch]) {
+						labeled_c.data[(R * 640 + C) * 3 + 0] = 0;
+						labeled_c.data[(R * 640 + C) * 3 + 1] = 0;
+						labeled_c.data[(R * 640 + C) * 3 + 2] = (10 - serch)*10 + 150;
+					}
+				}
 			}
 		}
-		cv::imshow("labeld", labeld);
-		//cv::imshow("labeld_c", labeled_c);
+
+		//for (int i = 1; label_array[i] > 0; i++) {
+		//	RegionInfoBS *ri = labeling.GetResultRegionInfo(i - 1);
+		//	int ave_l = label_array[i] / ri->GetNumOfPixels();
+		//	cerr << i << "\t" << label_array[i] << "\t" << ri->GetNumOfPixels() << "\t"
+		//		<< ave_l << "\n";
+		//}
+
+		//cv::imshow("sigma_diff", sigma_diff);
+		cv::imshow("labeled_c", labeled_c);
+		//char oss[32];
+		//sprintf(oss, "%d_tmp.bmp", filenum_static++);
+		//Cam::write_path = Cam::auto_root + "\\auto_tmp\\" + oss;
+		//cv::imwrite(Cam::write_path, labeled_c);
+
 		cv::waitKey(5);
 	}
 	return;
 }
 
 void Cam::StartTimer() {
+	Cam::label_mass_pixel = stoi(Cam::combo_text3);	//string to int
 	int count = 0;
-	timerID = timeSetEvent(100, 0, (LPTIMECALLBACK)timerProc, (DWORD)&count, TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
+	timerID = timeSetEvent(1000, 0, (LPTIMECALLBACK)timerProc, (DWORD)&count, TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
 	if (!timerID) cerr << "set timer failed\n";
 
 }

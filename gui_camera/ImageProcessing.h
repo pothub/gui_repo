@@ -18,13 +18,14 @@ using namespace std;
 class Cam {
 public:
 	static int file_num;
+	static int label_mass_pixel;
 	static string image_root;
 	static string auto_file;
 	static string auto_root;
 	static string combo_text1;
 	static string combo_text2;
 	static string combo_text3;
-	string write_path;
+	static string write_path;
 	const char *write_path_c;
 	FILE* file_generate;
 	string GetFileName(const string &path);
